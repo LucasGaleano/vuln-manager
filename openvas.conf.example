@@ -1,0 +1,17 @@
+[openvas]
+username = username
+password = password
+targetName = name of the target
+scanConfigName = Name_of_the_configuration_of_the_scanner
+checkScanInterval = 100
+ScanInterval = 2592000
+
+
+[alerta]
+url = https://alerta.url.com
+api = api_token
+
+[netbox]
+url = https://netbox.url.com
+api = api_token
+tenant = example
