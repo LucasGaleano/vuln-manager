@@ -7,6 +7,7 @@ from gvm.transforms import EtreeCheckCommandTransform
 import sys
 from time import sleep
 from loggingHelper import logger
+import subprocess
 
 @dataclass
 class OpenvasClient:
@@ -30,7 +31,8 @@ class OpenvasClient:
             self.gmp.connect()
             logger.info('Re-connecting to Openvas server')
 
-
+    def update():
+        subprocess.call(["gvm-feed-update"])
 
     def launch_scan(self, targetName, scanConfigName,hosts):
         self.target(targetName, hosts)

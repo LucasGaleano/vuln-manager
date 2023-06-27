@@ -25,13 +25,15 @@ def main():
         gmp = OpenvasClient(openvas_username, openvas_password)
         gmp.authenticate()
         logger.info('Starting Scan')
-        taskID = gmp.launch_scan(targetName=config['openvas']['targetName'] + ' ' + str(datetime.now()), scanConfigName=config['openvas']['scanConfigName'], hosts=get_netbox_ip())
+        targetName = config['openvas']['targetName'] + ' ' + str(datetime.now())
+        taskID = gmp.launch_scan(targetName=targetName, scanConfigName=config['openvas']['scanConfigName'], hosts=get_netbox_ip())
         gmp.wait_done(taskID, sleepTime=int(config['openvas']['checkScanInterval']))
         results = gmp.get_results(taskID)
 
-        send_alerta(results)
+        #send_alerta(results)
         logger.info(f'{len(results)} issues found') 
         logger.info('Done')
+        print(results)
         
         endTimeScan = time.time()
         timeTaken = int(endTimeScan - startTimeScan)
