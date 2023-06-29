@@ -26,9 +26,9 @@ def main():
         gmp.authenticate()
         logger.info('Updating system')
         gmp.update()
-        logger.info('Starting Scan')
         targetName = config['openvas']['targetName'] + ' ' + str(datetime.now())
         taskID = gmp.launch_scan(targetName=targetName, scanConfigName=config['openvas']['scanConfigName'], hosts=get_netbox_ip())
+        logger.info(f"Starting Scan {targetName}")
         gmp.wait_done(taskID, sleepTime=int(config['openvas']['checkScanInterval']))
         results = gmp.get_results(taskID)
 

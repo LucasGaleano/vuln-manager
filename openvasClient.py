@@ -31,17 +31,17 @@ class OpenvasClient:
             self.gmp.connect()
             logger.info('Re-connecting to Openvas server')
 
-    def update():
+    def update(self):
         subprocess.call(["gvm-feed-update"])
 
-    def launch_scan(self, targetName, scanConfigName,hosts):
+    def launch_scan(self, targetName, scanConfigName, hosts):
         self.target(targetName, hosts)
         return self.task(scanConfigName=scanConfigName, targetName=targetName)
 
     def wait_done(self, taskID, sleepTime=100):
         self.re_authenticate()
         status, progress, results = self.get_task_info(taskID)
-        while status != 'Done':
+        while status not in ['Done','Stopped'] :
             self.re_authenticate()
             logger.info(f'Status: {status} - Progress: {progress}% completed - results found: {results}')
             sleep(sleepTime)
@@ -59,7 +59,7 @@ class OpenvasClient:
         return element.xpath(elementName)[0].get('id') 
     
 
-    def task(self, scanConfigName, targetName=None):
+    def task(self, scanConfigName, targetName):
         try:
             
             task = self.gmp.create_task(name=targetName, config_id=self.get_id(self.gmp.get_scan_configs, "config", scanConfigName)
