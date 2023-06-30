@@ -35,8 +35,8 @@ class OpenvasClient:
         subprocess.call(["gvm-feed-update"])
 
     def launch_scan(self, targetName, scanConfigName, hosts):
-        self.target(targetName, hosts)
-        return self.task(scanConfigName=scanConfigName, targetName=targetName)
+        targetID = self.target(targetName, hosts)
+        return self.task(scanConfigName=scanConfigName, targetName=targetName, targetID=targetID)
 
     def wait_done(self, taskID, sleepTime=100):
         self.re_authenticate()
@@ -49,8 +49,8 @@ class OpenvasClient:
 
     def target(self, name, hosts):   
         try:
-            self.gmp.create_target(name=name, hosts=hosts, port_list_id=self.get_id(self.gmp.get_port_lists, "port_list", "nmap"))    
-
+            target = self.gmp.create_target(name=name, hosts=hosts, port_list_id=self.get_id(self.gmp.get_port_lists, "port_list", "nmap"))    
+            return target.get('id')
         except GvmError as e:
             logger.error(f'[-] Error: {e}')
 
@@ -59,11 +59,11 @@ class OpenvasClient:
         return element.xpath(elementName)[0].get('id') 
     
 
-    def task(self, scanConfigName, targetName):
+    def task(self, scanConfigName, targetName, targetID):
         try:
             
             task = self.gmp.create_task(name=targetName, config_id=self.get_id(self.gmp.get_scan_configs, "config", scanConfigName)
-                    , target_id=self.get_id(self.gmp.get_targets, "target", targetName)
+                    , target_id=targetID
                     , scanner_id=self.get_id(self.gmp.get_scanners, "scanner", "OpenVAS default"))
 
             self.gmp.start_task(task_id=task.get('id'))
