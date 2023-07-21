@@ -6,7 +6,7 @@ from pymongo import MongoClient, errors
 
 @dataclass
 class Endpoint:
-    """Class for keeping track of an item in inventory."""
+    """Class for keeping track of an endpoint in inventory."""
     _id: str
     host: str
     port: str
@@ -33,7 +33,8 @@ class Endpoint:
 
     def update(self, other):
         self.oids.update(other.oids)
-        self.service = other.service
+        if other.service:
+            self.service = other.service
 
 
     def json(self):
@@ -49,7 +50,7 @@ class Endpoint:
 
 @dataclass
 class Vulnerability:
-    """Class for keeping track of an item in inventory."""
+    """Class for keeping track of a vulnerability in inventory."""
     _id: str
     name: str
     family: str
@@ -101,7 +102,7 @@ class Repo:
 
         item = self.collections['host'].find_one({"_id" : f"{host.strip()} {portProtocol.strip()}"})
         if item:
-            endpoint = Endpoint(item['host'], f"{item['port']}/{item['protocol']}", oids=item["oids"])
+            endpoint = Endpoint(item['host'], f"{item['port']}/{item['protocol']}", oids=item["oids"], service=item['service'])
         else:
             endpoint = None
         return endpoint

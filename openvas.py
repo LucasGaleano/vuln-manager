@@ -1,8 +1,5 @@
-import sys
 from datetime import datetime, timedelta
 import time
-import requests
-import json
 from openvasClient import OpenvasClient
 import configparser
 from loggingHelper import logger

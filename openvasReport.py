@@ -1,19 +1,9 @@
-import sys
-from datetime import datetime, timedelta
-import time
-import requests
-import json
-from openvasClient import OpenvasClient
-import configparser
 from loggingHelper import logger
-import pynetbox
-import ipaddress
-import xml.etree.ElementTree as ET
 from repo import Repo, Endpoint, Vulnerability
 
 
 
-# docker run -d --rm -p 27017:27017 --name mongo mongo  
+# docker run -d --rm -p 27017:27017 --name mongo mongo:4.4.23  
 
 
 def get_value(element, tag):
@@ -57,30 +47,31 @@ def get_all_vulnerabilities(report, minThreat):
 def get_all_vulnerabilities_from_endpoint(vulnerabilitiesReported, endpoint):
     return [v._id for v in vulnerabilitiesReported if v.host == endpoint.host and v.portProtocol == f"{endpoint.port}/{endpoint.protocol}"]
 
-def updated_host(report):
+def update_host(report,repo):
+    logger.info("Updating hosts...")
     for host in [result for result in report.findall('./report/report/ports/port')]:
         newEndpoint = Endpoint(get_value(host,"host"),get_value_tail(host,"host"))
         result = repo.add_endpoint(newEndpoint)
         if result.upserted_id:
-            print('Added new endpoint:', newEndpoint._id)
+            logger.info(f'Added new endpoint: {newEndpoint._id}')
         elif result.modified_count:
-            print(result.modified_count)
-            print('Updating new endpoint:', newEndpoint._id)
+            logger.debug(newEndpoint)
+            logger.info(f'Updated new endpoint: {newEndpoint._id}')
 
-def update_service(report):
+def update_service(report,repo):
+    logger.info("Updating services...")
     for services in [result for result in report.findall('./report/report/results/result')]:
         if get_value(services, 'name') == "Services":
-            print(get_value(services,"description"))
             endpoint = Endpoint(get_value(services,"host"),get_value(services,"port"),service=get_value(services,"description"))
+            logger.debug(endpoint)
             repo.add_endpoint(endpoint)
-
 
 
 def save_report(report):
     repo = Repo('vuln_management', "mongodb://localhost")
 
-    updated_host(report)
-    update_service(report)
+    update_host(report, repo)
+    update_service(report, repo)
 
     vulnerabilitiesReported = []
 
@@ -91,7 +82,7 @@ def save_report(report):
             endpoint.add_oid(vulnerability._id)
             repo.add_endpoint(endpoint)
             repo.add_vulnerability(vulnerability)
-            print(f"Added new vulnerability to endpoint: oid={vulnerability._id} threat={vulnerability.threat} endpoint={endpoint._id}")
+            logger.info(f"Added new endpoint vulnerability oid:{vulnerability._id} threat:{vulnerability.threat} status:{endpoint.oids[vulnerability._id]['status']} endpoint:{endpoint._id}")
 
 
     for host in [result for result in report.findall('./report/report/ports/port')]:
@@ -99,16 +90,17 @@ def save_report(report):
         for oid in endpoint.oids.keys():
             if oid not in get_all_vulnerabilities_from_endpoint(vulnerabilitiesReported, endpoint) and endpoint.oids[oid]['status'] != "Solved":
                 endpoint.oids[oid]['status'] = "Solved"
-                print(f"New vulnerability solved oid={oid} endpoint={endpoint._id}")
+                v = repo.find_vuln_by(oid)
+                logger.info(f"Added new endpoint vulnerability oid:{oid} threat:{v['threat']} status:{endpoint.oids[oid]['status']} endpoint:{endpoint._id}")
             else:
                 endpoint.oids[oid]['status'] = "Open"
             repo.add_endpoint(endpoint)
 
 
-    for host in repo.get_all_host():
-        print(f"{host['_id']}, service: \"{host['service']}\"")
-        for oid, info in host["oids"].items():
-            v = repo.find_vuln_by(oid)
-            print(oid, info['status'], v['name'])
-        print()
+    # for host in repo.get_all_host():
+    #     print(f"{host['_id']}, service: \"{host['service']}\"")
+    #     for oid, info in host["oids"].items():
+    #         v = repo.find_vuln_by(oid)
+    #         print(oid, info['status'], v['name'])
+    #     print()
 
