@@ -80,10 +80,13 @@ class OpenvasClient:
         results = taskInfo.find('result_count').text
         return status, progress, results
 
-    def get_results(self, taskID):
+    def get_report(self, taskID):
         self.re_authenticate()
         reportID = self.gmp.get_task(taskID).xpath('task')[0].xpath('last_report')[0].find('report').get('id')
-        report = self.gmp.get_report(reportID, ignore_pagination=True)
+        return self.gmp.get_report(reportID, ignore_pagination=True)       
+
+    def get_results(self, taskID):
+        report = self.get_report(taskID)
         results = []
         for result in report.xpath('report')[0].xpath('report')[0].xpath('results')[0]:
             if float(result.find('severity').text) > 0.0 :

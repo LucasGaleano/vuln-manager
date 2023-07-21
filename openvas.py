@@ -8,6 +8,7 @@ import configparser
 from loggingHelper import logger
 import pynetbox
 import ipaddress
+from openvasReport import save_report
 
 config = configparser.ConfigParser()
 config.read('openvas.conf')
@@ -30,9 +31,11 @@ def main():
         taskID = gmp.launch_scan(targetName=targetName, scanConfigName=config['openvas']['scanConfigName'], hosts=get_netbox_ip())
         logger.info(f"Starting Scan {targetName}")
         gmp.wait_done(taskID, sleepTime=int(config['openvas']['checkScanInterval']))
+        report = gmp.get_report(taskID)
+
+        save_report(report)
         results = gmp.get_results(taskID)
 
-        #send_alerta(results)
         logger.info(f'{len(results)} issues found') 
         logger.info('Done')
         print(results)
@@ -59,29 +62,6 @@ def get_netbox_ip(publicIP=True):
 
     logger.info(f'Scope: {", ".join(ips)}')
     return ips
-
-
-
-
-def send_alerta(results):
-    headers = {'content-type': 'application/json'}
-    params = {'api-key': alerta_api}
-
-    data = {
-            "environment": "Security",
-            "event": f"{len(results)} issues found",
-            "origin": "External Penetration Test",
-            "resource": "External Penetration Test",
-            "service": [
-                       "External Penetration Test"
-                           ],
-            "severity": "critical",
-            "text": "Results from the external penetration test.",
-            "rawData" : '\n'.join(results)
-            }
-
-    response = requests.post(alerta_url, data=json.dumps(data), headers=headers, params=params)
-    logger.info(f'[+] Sending results to Alerta {response}')
 
 if __name__ == "__main__":
     main()
