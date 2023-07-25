@@ -68,7 +68,8 @@ def update_service(report,repo):
 
 
 def save_report(report):
-    repo = Repo('vuln_management', "mongodb://localhost")
+    repo = Repo('vuln_management', "mongodb://mongo")
+    
 
     update_host(report, repo)
     update_service(report, repo)
