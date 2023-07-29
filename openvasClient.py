@@ -92,5 +92,4 @@ class OpenvasClient:
             if float(result.find('severity').text) > 0.0 :
                 resultName = f"{result.find('host').text}:{result.find('port').text} - {result.find('name').text}"
                 results.append(resultName)
-                logger.info(f"{resultName}")
         return results

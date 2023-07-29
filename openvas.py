@@ -23,7 +23,7 @@ def main():
         gmp = OpenvasClient(openvas_username, openvas_password)
         gmp.authenticate()
         logger.info('Updating system')
-        gmp.update()
+        #gmp.update()
         targetName = config['openvas']['targetName'] + ' ' + str(datetime.now())
         taskID = gmp.launch_scan(targetName=targetName, scanConfigName=config['openvas']['scanConfigName'], hosts=get_netbox_ip())
         logger.info(f"Starting Scan {targetName}")
@@ -35,7 +35,6 @@ def main():
 
         logger.info(f'{len(results)} issues found') 
         logger.info('Done')
-        print(results)
         
         endTimeScan = time.time()
         timeTaken = int(endTimeScan - startTimeScan)
@@ -57,7 +56,7 @@ def get_netbox_ip(publicIP=True):
     else:
         ips = [str(ip).split('/')[0] for ip in reqIps if ipaddress.ip_address(str(ip).split('/')[0]).is_private]
 
-    logger.info(f'Scope: {", ".join(ips)}')
+    logger.info(f'Scope: {len(ips)} IPs.')
     return ips
 
 if __name__ == "__main__":
