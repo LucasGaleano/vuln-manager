@@ -67,10 +67,8 @@ def update_service(report,repo):
             repo.add_endpoint(endpoint)
 
 
-def save_report(report):
-    repo = Repo('vuln_management', "mongodb://mongo")
+def update_database(repo, report):
     
-
     update_host(report, repo)
     update_service(report, repo)
 
@@ -97,11 +95,4 @@ def save_report(report):
                 endpoint.oids[oid]['status'] = "Open"
             repo.add_endpoint(endpoint)
 
-
-    # for host in repo.get_all_host():
-    #     print(f"{host['_id']}, service: \"{host['service']}\"")
-    #     for oid, info in host["oids"].items():
-    #         v = repo.find_vuln_by(oid)
-    #         print(oid, info['status'], v['name'])
-    #     print()
 

@@ -5,7 +5,9 @@ import configparser
 from loggingHelper import logger
 import pynetbox
 import ipaddress
-from openvasReport import save_report
+from openvasParser import update_database
+from report import Report
+from repo import Repo
 
 config = configparser.ConfigParser()
 config.read('openvas.conf')
@@ -15,6 +17,9 @@ openvas_password = config['openvas']['password']
 
 alerta_url = config['alerta']['url']
 alerta_api = config['alerta']['token']
+
+reportName = "vulnerabilities"
+repo = Repo('vuln_management', "mongodb://mongo")
 
 def main():
 
@@ -30,7 +35,8 @@ def main():
         gmp.wait_done(taskID, sleepTime=int(config['openvas']['checkScanInterval']))
         report = gmp.get_report(taskID)
 
-        save_report(report)
+        update_database(repo, report)
+        generate_spreadsheet_report(reportName)
         results = gmp.get_results(taskID)
 
         logger.info(f'{len(results)} issues found') 
@@ -43,6 +49,10 @@ def main():
         logger.info(f"Scan finished, duration: {str(timedelta(seconds=timeTaken))}")
         logger.info(f"Waiting {str(timedelta(seconds=sleepFor))} for the next scan")
         time.sleep(sleepFor)
+
+def generate_spreadsheet_report(reportName):    
+    vulnerabilities = repo.get_summary()
+    Report.toExcel(vulnerabilities, reportName)
 
 
 def get_netbox_ip(publicIP=True):
