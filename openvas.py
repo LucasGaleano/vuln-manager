@@ -9,8 +9,6 @@ from openvasParser import update_database
 from report import Report
 from repo import Repo
 from sendEmail import send_email_report
-import datetime
-
 
 config = configparser.ConfigParser()
 config.read('openvas.conf')
@@ -42,7 +40,7 @@ def main():
 
         update_database(repo, report)
         generate_spreadsheet_report(reportName)
-        suffix = str(datetime.datetime.now().date()) 
+        suffix = str(datetime.now().date()) 
 
 
         send_email_report(emailTo, emailFrom, subject, mailServer, reportName, reportName+'-'+suffix, 'xlsx')
