@@ -6,10 +6,11 @@ scanConfigName = Name_of_the_configuration_of_the_scanner
 checkScanInterval = 100
 ScanInterval = 2592000
 
-
-[alerta]
-url = https://alerta.url.com
-api = api_token
+[email]
+from = emailFrom
+to = emailTo
+subject = subject
+mailServer = mailServer
 
 [netbox]
 url = https://netbox.url.com

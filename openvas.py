@@ -8,6 +8,9 @@ import ipaddress
 from openvasParser import update_database
 from report import Report
 from repo import Repo
+from sendEmail import send_email_report
+import datetime
+
 
 config = configparser.ConfigParser()
 config.read('openvas.conf')
@@ -15,8 +18,10 @@ config.read('openvas.conf')
 openvas_username = config['openvas']['username']
 openvas_password = config['openvas']['password']
 
-alerta_url = config['alerta']['url']
-alerta_api = config['alerta']['token']
+emailFrom = config['email']['from']
+emailTo = config['email']['to']
+subject = config['email']['subject']
+mailServer = config['email']['mailServer']
 
 reportName = "vulnerabilities"
 repo = Repo('vuln_management', "mongodb://mongo")
@@ -37,6 +42,11 @@ def main():
 
         update_database(repo, report)
         generate_spreadsheet_report(reportName)
+        suffix = str(datetime.datetime.now().date()) 
+
+
+        send_email_report(emailTo, emailFrom, subject, mailServer, reportName, reportName+'-'+suffix, 'xlsx')
+        logger.info(f'Sending report {reportName+"-"+suffix} to {emailTo}')
         results = gmp.get_results(taskID)
 
         logger.info(f'{len(results)} issues found') 

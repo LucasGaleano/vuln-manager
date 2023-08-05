@@ -7,10 +7,10 @@ class Report:
         worksheet = workbook.add_worksheet()
 
         #Colores
-        LIGHT_GRAY = '#CCCCCC'
+        BLUE = '#1652F3'
 
         #Formatos
-        bold = workbook.add_format({'bold': True, 'bg_color': LIGHT_GRAY,'align': 'center'})
+        bold = workbook.add_format({'bold': True, 'bg_color': BLUE,'align': 'center'})
         align_center = workbook.add_format({'align': 'center','valign':'vcenter','text_wrap':True})
         align_text = workbook.add_format({'align': 'left','valign':'top','text_wrap':True})
         align_center_left = workbook.add_format({'valign':'vcenter','text_wrap':True})

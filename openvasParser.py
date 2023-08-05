@@ -2,10 +2,6 @@ from loggingHelper import logger
 from repo import Repo, Endpoint, Vulnerability
 
 
-
-# docker run -d --rm -p 27017:27017 --name mongo mongo:4.4.23  
-
-
 def get_value(element, tag):
     try:
         return element.findall(tag)[0].text.strip()
