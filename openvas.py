@@ -36,14 +36,11 @@ def main():
         vulnerabilities = openvasParser.get_all_vulnerabilities(report,"Log")
         endpoints = openvasParser.get_all_endpoints(report)
 
-        print(vulnerabilities)
-        print(endpoints)
-
         logger.info("Updating endpoints...")
         for endpoint in endpoints:
             update_endpoint(endpoint, repo)
 
-        logger.info("Updating endpoints...")
+        logger.info("Updating vulnerabilities...")
         for vulnerability in vulnerabilities:
             update_endpoint_vulnerability(vulnerability, repo)
 
