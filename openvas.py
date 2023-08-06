@@ -5,7 +5,7 @@ import configparser
 from loggingHelper import logger
 import pynetbox
 import ipaddress
-from openvasParser import update_database
+import openvasParser
 from report import Report
 from repo import Repo
 from sendEmail import send_email_report
@@ -15,6 +15,7 @@ config.read('openvas.conf')
 
 openvas_username = config['openvas']['username']
 openvas_password = config['openvas']['password']
+scanConfigName = config['openvas']['scanConfigName']
 
 emailFrom = config['email']['from']
 emailTo = config['email']['to']
@@ -27,27 +28,36 @@ repo = Repo('vuln_management', "mongodb://mongo")
 def main():
 
     while True:
+        vulnerabilities = []
+        endpoints = []
         startTimeScan = time.time()
-        gmp = OpenvasClient(openvas_username, openvas_password)
-        gmp.authenticate()
-        logger.info('Updating system')
-        #gmp.update()
-        targetName = config['openvas']['targetName'] + ' ' + str(datetime.now())
-        taskID = gmp.launch_scan(targetName=targetName, scanConfigName=config['openvas']['scanConfigName'], hosts=['localhost'])
-        logger.info(f"Starting Scan {targetName}")
-        gmp.wait_done(taskID, sleepTime=int(config['openvas']['checkScanInterval']))
-        report = gmp.get_report(taskID)
+        
+        report = openvas_scanning(['localhost'])
+        vulnerabilities = openvasParser.get_all_vulnerabilities(report,"Log")
+        endpoints = openvasParser.get_all_endpoints(report)
 
-        update_database(repo, report)
+        print(vulnerabilities)
+        print(endpoints)
+
+        logger.info("Updating endpoints...")
+        for endpoint in endpoints:
+            update_endpoint(endpoint, repo)
+
+        logger.info("Updating endpoints...")
+        for vulnerability in vulnerabilities:
+            update_endpoint_vulnerability(vulnerability, repo)
+
+        for endpoint in endpoints:
+            update_endpoint_vulnerability_status(endpoint, vulnerabilities, repo)
+
         generate_spreadsheet_report(reportName)
         suffix = str(datetime.now().date()) 
 
 
         send_email_report(emailTo, emailFrom, subject, mailServer, reportName, reportName+'-'+suffix, 'xlsx')
-        logger.info(f'Sending report {reportName+"-"+suffix} to {emailTo}')
-        results = gmp.get_results(taskID)
+        logger.info(f'Sending report {reportName}-{suffix}.xlsx to {emailTo}')
 
-        logger.info(f'{len(results)} issues found') 
+        logger.info(f'{len(vulnerabilities)} issues found') 
         logger.info('Done')
         
         endTimeScan = time.time()
@@ -57,6 +67,47 @@ def main():
         logger.info(f"Scan finished, duration: {str(timedelta(seconds=timeTaken))}")
         logger.info(f"Waiting {str(timedelta(seconds=sleepFor))} for the next scan")
         time.sleep(sleepFor)
+
+def update_endpoint_vulnerability_status(endpoint, vulnerabilities, repo):
+    endpoint = repo.get_endpoint(endpoint.host, f"{endpoint.port}/{endpoint.protocol}")
+    for oid in endpoint.oids.keys():
+        endpointOidsReported = openvasParser.get_all_vulnerabilities_from_endpoint(vulnerabilities, endpoint)
+        if oid not in endpointOidsReported and endpoint.oids[oid]['status'] == "Open":
+            endpoint.oids[oid]['status'] = "Solved"
+            v = repo.find_vuln_by(oid)
+            logger.info(f"Solved new endpoint vulnerability oid:{oid} threat:{v['threat']} status:{endpoint.oids[oid]['status']} endpoint:{endpoint._id}")
+        if oid in endpointOidsReported and endpoint.oids[oid]['status'] != "Open":
+            endpoint.oids[oid]['status'] = "Open"
+            v = repo.find_vuln_by(oid)
+            logger.info(f"Re-open endpoint vulnerability oid:{oid} threat:{v['threat']} status:{endpoint.oids[oid]['status']} endpoint:{endpoint._id}")
+    repo.add_endpoint(endpoint)
+
+def update_endpoint_vulnerability(vulnerability, repo):
+    endpoint = repo.get_endpoint(vulnerability.host, vulnerability.portProtocol)
+    if vulnerability._id not in endpoint.oids.keys():
+        endpoint.add_oid(vulnerability._id)
+        repo.add_endpoint(endpoint)
+        repo.add_vulnerability(vulnerability)
+        logger.info(f"Added new endpoint vulnerability oid:{vulnerability._id} threat:{vulnerability.threat} status:{endpoint.oids[vulnerability._id]['status']} endpoint:{endpoint._id}")
+
+def update_endpoint(endpoint, repo):
+    result = repo.add_endpoint(endpoint)
+    if result.upserted_id:
+        logger.info(f'Added new endpoint: {endpoint._id}')
+    # elif result.modified_count:
+    #     logger.debug(endpoint)
+    #     logger.info(f'Updated new endpoint: {endpoint._id}')
+
+def openvas_scanning(hosts):
+    gmp = OpenvasClient(openvas_username, openvas_password)  
+    gmp.authenticate()
+    logger.info('Updating system')
+    #gmp.update()
+    targetName = config['openvas']['targetName'] + ' ' + str(datetime.now())
+    taskID = gmp.launch_scan(targetName=targetName, scanConfigName=scanConfigName, hosts=hosts)
+    logger.info(f"Starting Scan {targetName}")
+    gmp.wait_done(taskID, sleepTime=int(config['openvas']['checkScanInterval']))
+    return gmp.get_report(taskID)
 
 def generate_spreadsheet_report(reportName):    
     vulnerabilities = repo.get_summary()

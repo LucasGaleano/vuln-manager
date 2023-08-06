@@ -136,12 +136,13 @@ class Repo:
         for host in self.get_all_host():
             for oid, data in host['oids'].items():
                 vuln = self.find_vuln_by(oid)
-                vuln['status'] = data['status']
-                vuln['notes'] = data['notes']
-                vuln.update(host)
-                vuln.pop('oids')
-                vuln.pop('_id')
-                vuln['vulnerability ID'] = oid
-                #{'cvss': '6.4', 'description': '', 'family': 'General', 'name': 'MQTT Broker Does Not Require Authentication', 'solution': '', 'threat': 'Medium', 'value': 'AV:N/AC:L/Au:N/C:P/I:P/A:N', 'status': 'Open', 'notes': '', 'host': '1.2.3.4', 'port': '1456', 'protocol': 'tcp', 'service': '', 'vulnerability ID': '1.3.6.1.4.1.25623.1.0.140167'}
-                vulnerabilities.append(vuln)
+                if data['status'] == "Open":
+                    vuln['status'] = data['status']
+                    vuln['notes'] = data['notes']
+                    vuln.update(host)
+                    vuln.pop('oids')
+                    vuln.pop('_id')
+                    vuln['vulnerability ID'] = oid
+                    #{'cvss': '6.4', 'description': '', 'family': 'General', 'name': 'MQTT Broker Does Not Require Authentication', 'solution': '', 'threat': 'Medium', 'value': 'AV:N/AC:L/Au:N/C:P/I:P/A:N', 'status': 'Open', 'notes': '', 'host': '1.2.3.4', 'port': '1456', 'protocol': 'tcp', 'service': '', 'vulnerability ID': '1.3.6.1.4.1.25623.1.0.140167'}
+                    vulnerabilities.append(vuln)
         return vulnerabilities

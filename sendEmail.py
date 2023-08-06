@@ -34,7 +34,8 @@ def send_email_plain(emailFrom, emailTo, subject, mailServer, content):
     msg += f"Subject: {subject}\n"
     msg += content
 
-    server = SMTP(host=mailServer, port=25)    
+    server = SMTP(host=mailServer, port=25)
+    server.starttls() 
     server.sendmail(emailFrom, emailTo, msg)
     server.quit()
 
