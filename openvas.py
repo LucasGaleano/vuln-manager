@@ -51,7 +51,7 @@ def main():
         suffix = str(datetime.now().date()) 
 
 
-        send_email_report(emailTo, emailFrom, subject, mailServer, reportName, reportName+'-'+suffix, 'xlsx')
+        send_email_report(emailFrom, emailTo, f"{subject} - {suffix}", mailServer, reportName, reportName+'-'+suffix, 'xlsx')
         logger.info(f'Sending report {reportName}-{suffix}.xlsx to {emailTo}')
 
         logger.info(f'{len(vulnerabilities)} issues found') 
