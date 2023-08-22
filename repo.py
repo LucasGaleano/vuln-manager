@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pymongo import MongoClient
+import time
 
 
 
@@ -28,8 +29,10 @@ class Endpoint:
         self.oids = oids
 
 
-    def add_oid(self, oid, status="Open", notes=""):
-        self.oids[oid] = {"status":status,"notes":notes}
+    def add_oid(self, oid, status="Open", notes="", findingTime=None):
+        if not findingTime:
+            findingTime = time.time()
+        self.oids[oid] = {"status":status,"notes":notes, "finding_time": findingTime}
 
     def update(self, other):
         self.oids.update(other.oids)

@@ -54,7 +54,7 @@ def main():
         send_email_report(emailFrom, emailTo, f"{subject} - {suffix}", mailServer, reportName, reportName+'-'+suffix, 'xlsx')
         logger.info(f'Sending report {reportName}-{suffix}.xlsx to {emailTo}')
 
-        logger.info(f'{len(vulnerabilities)} issues found') 
+        logger.info(f'{len(vulnerabilities)} issues found')
         logger.info('Done')
         
         endTimeScan = time.time()
@@ -88,6 +88,13 @@ def update_endpoint_vulnerability(vulnerability, repo):
         logger.info(f"Added new endpoint vulnerability oid:{vulnerability._id} threat:{vulnerability.threat} status:{endpoint.oids[vulnerability._id]['status']} endpoint:{endpoint._id}")
 
 def update_endpoint(endpoint, repo):
+    result = repo.get_endpoint(endpoint.host, f"{endpoint.port}/{endpoint.protocol}")
+    if not result:
+        logger.info(f'Added new endpoint: {endpoint._id}')
+        repo.add_endpoint(endpoint)
+    
+
+
     result = repo.add_endpoint(endpoint)
     if result.upserted_id:
         logger.info(f'Added new endpoint: {endpoint._id}')
