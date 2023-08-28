@@ -32,7 +32,7 @@ class Endpoint:
     def add_oid(self, oid, status="Open", notes="", findingTime=None):
         if not findingTime:
             findingTime = time.time()
-        self.oids[oid] = {"status":status,"notes":notes, "finding_time": findingTime}
+        self.oids[oid] = {"status":status,"notes":notes, "finding_time": findingTime, "solved_time": ''}
 
     def update(self, other):
         self.oids.update(other.oids)

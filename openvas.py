@@ -71,12 +71,14 @@ def update_endpoint_vulnerability_status(endpoint, vulnerabilities, repo):
         endpointOidsReported = openvasParser.get_all_vulnerabilities_from_endpoint(vulnerabilities, endpoint)
         if oid not in endpointOidsReported and endpoint.oids[oid]['status'] == "Open":
             endpoint.oids[oid]['status'] = "Solved"
+            endpoint.oids[oid]['solved_time'] = time.time()
             v = repo.find_vuln_by(oid)
-            logger.info(f"Solved new endpoint vulnerability oid:{oid} threat:{v['threat']} status:{endpoint.oids[oid]['status']} endpoint:{endpoint._id}")
+            log_vuln("Solved endpoint vulnerability oid", endpoint, v)
         if oid in endpointOidsReported and endpoint.oids[oid]['status'] != "Open":
             endpoint.oids[oid]['status'] = "Open"
             v = repo.find_vuln_by(oid)
-            logger.info(f"Re-open endpoint vulnerability oid:{oid} threat:{v['threat']} status:{endpoint.oids[oid]['status']} endpoint:{endpoint._id}")
+            log_vuln("Re-open endpoint vulnerability oid", endpoint, v)
+            endpoint.oids[oid]['solved_time'] = ''
     repo.add_endpoint(endpoint)
 
 def update_endpoint_vulnerability(vulnerability, repo):
@@ -85,7 +87,7 @@ def update_endpoint_vulnerability(vulnerability, repo):
         endpoint.add_oid(vulnerability._id)
         repo.add_endpoint(endpoint)
         repo.add_vulnerability(vulnerability)
-        logger.info(f"Added new endpoint vulnerability oid:{vulnerability._id} threat:{vulnerability.threat} status:{endpoint.oids[vulnerability._id]['status']} endpoint:{endpoint._id}")
+        log_vuln("Added new endpoint vulnerability oid", endpoint, vulnerability)
 
 def update_endpoint(endpoint, repo):
     result = repo.get_endpoint(endpoint.host, f"{endpoint.port}/{endpoint.protocol}")
@@ -117,6 +119,8 @@ def generate_spreadsheet_report(reportName):
     vulnerabilities = repo.get_summary()
     Report.toExcel(vulnerabilities, reportName)
 
+def log_vuln(msg, endpoint, vulnerability):
+    logger.info(f"{msg} oid:{vulnerability._id} threat:{vulnerability.threat} status:{endpoint.oids[vulnerability._id]['status']} endpoint:{endpoint._id}")
 
 def get_netbox_ip(publicIP=True):
 
