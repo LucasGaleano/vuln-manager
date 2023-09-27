@@ -90,7 +90,7 @@ def log_summary(vulnerabilities: list[Vulnerability], scan: dict, repo: Repo):
     logOutput['Low'] = countVuln.count('Low')
     logOutput['assessment'] = repo.databaseName
     logOutput['scan'] = scan['name']
-    logOutput['table_format'] = f"logOutput['msg']\nassessment: {logOutput['assessment']}\nscan: {logOutput['scan']}\ncritical: {logOutput['critical']}\nHigh: {logOutput['High']}\nMedium: {logOutput['Medium']}\nLow: {logOutput['Low']}\n"
+    logOutput['table_format'] = f"{logOutput['msg']}\nassessment: {logOutput['assessment']}\nscan: {logOutput['scan']}\ncritical: {logOutput['critical']}\nHigh: {logOutput['High']}\nMedium: {logOutput['Medium']}\nLow: {logOutput['Low']}\n"
                                 
     logger.info(json.dumps(logOutput))
 
