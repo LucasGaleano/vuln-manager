@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict, field
 from pymongo import MongoClient
 import time
 from loggingHelper import logger
+import urllib.parse
 
 
 
@@ -82,16 +83,21 @@ class Repo:
     _database: str
     databaseName: str
     collections: dict[str,str]
+    user: str
+    password: str
 
-    def __init__(self, databaseName, url):
+    def __init__(self, databaseName, host, user, password):
 
+
+        self.user = urllib.parse.quote_plus(user)
+        self.password = urllib.parse.quote_plus('pass/word')
         self.databaseName = databaseName
     
         # Provide the mongodb atlas url to connect python to mongodb using pymongo
-        CONNECTION_STRING = url
+        CONNECTION_STRING = "mongodb://%s:%s" + "@" + host
         
         # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
-        client = MongoClient(CONNECTION_STRING)
+        client = MongoClient(CONNECTION_STRING % (user,password))
         
         # Create the database for our example (we will use the same database throughout the tutorial
         self._database = client[databaseName]

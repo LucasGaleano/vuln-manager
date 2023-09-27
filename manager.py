@@ -22,6 +22,9 @@ emailTo = config['email']['to']
 subject = config['email']['subject']
 mailServer = config['email']['mailServer']
 
+ddbb_user = config['ddbb']['user']
+ddbb_password = config['ddbb']['password']
+
 reportName = "vulnerabilities"
 
 def main():
@@ -41,7 +44,7 @@ def main():
                 logger.info(f"Scan not finished folder: {databaseName} name: {scan['name']}")
                 continue
                     
-            repo = Repo(databaseName, "mongodb://mongo")
+            repo = Repo(databaseName, host="mongo", user=ddbb_user, password=ddbb_password)
 
             logger.info(f"Fetching report {databaseName} name: {scan['name']}")
 

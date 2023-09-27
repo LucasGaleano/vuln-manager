@@ -13,6 +13,10 @@ port= 8834
 url= https://example.com
 checkScanInterval = 100
 
+[ddbb]
+user = test
+password = test
+
 [email]
 from = emailFrom
 to = emailTo
