@@ -1,4 +1,7 @@
 manager.conf
+run.sh
+temporal.xml
+testing.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
