@@ -1,94 +1,91 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, field
 from pymongo import MongoClient
 import time
-
+from loggingHelper import logger
 
 
 
 @dataclass
 class Endpoint:
     """Class for keeping track of an endpoint in inventory."""
-    _id: str
-    host: str
-    port: str
-    protocol: str
-    service: str
-    oids: dict[str,dict[str,str]]
-
-    def __eq__(self, other) -> float:
-        return self._id == other._id
+    _id: str = field(init=False, compare=True)
+    ip: str = field(compare=False)  
+    port: str = field(compare=False)
+    protocol: str = field(compare=False)
+    service: str = field(compare=False)
+    hostnames: list[str] = field(compare=False, default_factory=list)
+    vulnerabilities: dict[str,dict[str,str]] = field(compare=False, default_factory=dict)
     
-    def __init__(self, host, portProtocol, service="", oids=None):
-        if oids is None:
-            oids = {}
-        self._id = f"{host} {portProtocol}"
-        self.host = host
-        self.port = portProtocol.split('/')[0].strip()
-        self.protocol = portProtocol.split('/')[1].strip()
-        self.service = service
-        self.oids = oids
+    def __post_init__(self):
+        self._id = f"{self.ip}:{self.port}/{self.protocol}"
 
-
-    def add_oid(self, oid, status="Open", notes="", findingTime=None):
+    def add_vulnerability(self, id, status="Open", notes="", findingTime=None):
         if not findingTime:
             findingTime = time.time()
-        self.oids[oid] = {"status":status,"notes":notes, "finding_time": findingTime, "solved_time": ''}
+        self.vulnerabilities[id] = {"status":status,"notes":notes, "finding_time": findingTime, "solved_time": ''}
 
-    def update(self, other):
-        self.oids.update(other.oids)
-        if other.service:
-            self.service = other.service
+    def add_hostname(self, hostname):
+        # cannot use Set() for the pymongo integration
+        if hostname not in self.hostnames:
+            self.hostnames.append(hostname)
+    
+    def solve_vulnerability(self, id:int):
+        self.vulnerabilities[id]['status'] = "Solved"
+        self.vulnerabilities[id]['solved_time'] = time.time()
+
+    def update_vulnerabilities(self, other):
+        vulnSolved = []
+        vulnMissing = self.vulnerabilities.keys() - other.vulnerabilities.keys()
+        vulnAdded = other.vulnerabilities.keys() - self.vulnerabilities.keys()
+        for id in vulnAdded:
+            self.add_vulnerability(id)
+        for id in vulnMissing:
+            if self.vulnerabilities[id]['status'] == "Open":
+                self.solve_vulnerability(id)
+                vulnSolved.append(id)
+
+        return (vulnAdded, vulnSolved)
 
 
     def json(self):
-        return {
-            "_id":self._id,
-            "host":self.host,
-            "port":self.port,
-            "protocol":self.protocol,
-            "service":self.service,
-            "oids":self.oids
-        }
+        return asdict(self)
 
 
 @dataclass
 class Vulnerability:
     """Class for keeping track of a vulnerability in inventory."""
     _id: str
-    name: str
-    family: str
-    threat: str
-    cvss: str
-    date: str
-    value: str
-    solution: str
-    description: str
-    host: str = ""
-    portProtocol: str = ""
+    name: str = ""
+    family: str = ""
+    cvss3: str = ""
+    severity: str = ""
+    cpe: str = ""
+    threat: str = ""
+    cve: str = ""
+    description: str = ""
+    solution: str = ""
+    seeAlso: str = ""
+    synopsis: str = ""
+    cvss3Vector: str = ""
+    age: str = ""
 
     def __eq__(self, other) -> float:
         return self._id == other._id
 
     def json(self):
-        return {
-            "_id":self._id,
-            "name":self.name,
-            "family":self.family,
-            "threat":self.threat,
-            "cvss":self.cvss,
-            "value":self.value,
-            "solution":self.solution,
-            "description":self.description
-        }
+        return asdict(self)
 
 
 @dataclass
 class Repo:
     """Class for database management."""
-    database: str
+    _database: str
+    databaseName: str
     collections: dict[str,str]
 
-    def __init__(self, database, url):
+    def __init__(self, databaseName, url):
+
+        self.databaseName = databaseName
     
         # Provide the mongodb atlas url to connect python to mongodb using pymongo
         CONNECTION_STRING = url
@@ -97,15 +94,25 @@ class Repo:
         client = MongoClient(CONNECTION_STRING)
         
         # Create the database for our example (we will use the same database throughout the tutorial
-        self.database = client[database]
+        self._database = client[databaseName]
 
-        self.collections = {"vulnerability":self.database["vulnerability"],"host":self.database["host"]}
+        self.collections = {"vulnerability":self._database["vulnerability"],"host":self._database["host"]}
 
     def get_endpoint(self, host, portProtocol):
 
         item = self.collections['host'].find_one({"_id" : f"{host.strip()} {portProtocol.strip()}"})
         if item:
             endpoint = Endpoint(item['host'], f"{item['port']}/{item['protocol']}", oids=item["oids"], service=item['service'])
+        else:
+            endpoint = None
+        return endpoint
+    
+    def get_endpoint_by_id(self, id: str) -> Endpoint:
+
+        item = self.collections['host'].find_one({"_id" : id})
+        if item:
+            item.pop('_id')
+            endpoint = Endpoint(**item)
         else:
             endpoint = None
         return endpoint
@@ -116,10 +123,6 @@ class Repo:
 #   result.matched_count   result.raw_result  
 #   {'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}
     def add_endpoint(self, newEndpoint: Endpoint):
-        fetchEndpoint = self.get_endpoint(newEndpoint._id.split()[0], newEndpoint._id.split()[1])
-        if fetchEndpoint:
-            fetchEndpoint.update(newEndpoint)
-            newEndpoint = fetchEndpoint
         return self.collections['host'].update_one({"_id":newEndpoint._id},{"$set":newEndpoint.json()},upsert=True)
 
     def add_vulnerability(self, vulnerability: Vulnerability):
@@ -131,8 +134,9 @@ class Repo:
     def get_all_host(self):
         return self.collections['host'].find()
     
-    def find_vuln_by(self, oid):
-        return self.collections['vulnerability'].find_one({"_id":oid})
+    def find_vuln_by_id(self, id):
+        vuln = self.collections['vulnerability'].find_one({"_id":id})
+        return Vulnerability(**vuln)
     
     def get_summary(self):
         vulnerabilities = []

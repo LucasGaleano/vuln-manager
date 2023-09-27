@@ -6,6 +6,13 @@ scanConfigName = Name_of_the_configuration_of_the_scanner
 checkScanInterval = 100
 ScanInterval = 2592000
 
+[nessus]
+access_key = username
+secret_key = password
+port= 8834
+url= https://example.com
+checkScanInterval = 100
+
 [email]
 from = emailFrom
 to = emailTo

@@ -2,3 +2,4 @@ python-gvm
 pymongo
 pynetbox
 xlsxwriter
+pytenable
