@@ -6,6 +6,38 @@ from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 logging.basicConfig(level=logging.DEBUG)
 
+
+@dataclass
+class Scan():
+
+    id: str
+    name: str
+    live_results: int
+    control: bool
+    enabled: bool
+    starttime: str
+    rrules: str
+    timezone: str
+    owner: str
+    user_permissions: int
+    shared: bool
+    uuid: str
+    status: str
+    creation_date: int
+    last_modification_date: int
+    read: bool
+    type: str
+    folder_id: int
+    folder_name: str
+
+
+    def folderNameNoSpaces(self) -> str:
+        return '_'.join(self.folder_name.split())
+    
+    def completed(self) -> bool:
+        return self.status == "completed"
+
+
 @dataclass
 class NessusParser():
 
@@ -129,12 +161,12 @@ class NessusParser():
         return endpoints.values(), vulnerabilities
 
                 
-    def get_all_scans(self):
+    def get_all_scans(self) -> list[Scan]:
         scans = []
         data = self._nessus.scans.list()
         for scan in data['scans']:
-            scan['folder_name'] = [folder['name'] for folder in data['folders'] if folder['id']== scan['folder_id']][0]
-            scans.append(scan)
+            scan['folder_name'] = [folder['name'] for folder in data['folders'] if folder['id'] == scan['folder_id']][0]
+            scans.append(Scan(**scan))
         return scans
 
 

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import time
 import json
-from nessusParser import NessusParser
+from nessusParser import NessusParser, Scan
 import configparser
 from loggingHelper import logger
 from report import Report
@@ -25,6 +25,7 @@ mailServer = config['email']['mailServer']
 ddbb_user = config['ddbb']['user']
 ddbb_password = config['ddbb']['password']
 
+
 reportName = "vulnerabilities"
 
 def main():
@@ -38,52 +39,49 @@ def main():
         scans = nessus.get_all_scans()
         for scan in scans:
 
-            databaseName =  '_'.join(scan['folder_name'].split())
+            databaseName =  scan.folderNameNoSpaces()
 
-            if scan['status'] != "completed":
-                logger.info(f"Scan not finished folder: {databaseName} name: {scan['name']}")
+            if not scan.completed():
+                logger.info(f"Scan not finished folder: {databaseName} name: {scan.name}")
                 continue
                     
-            repo = Repo(databaseName, host="mongo", user=ddbb_user, password=ddbb_password)
+            with Repo(databaseName, host="mongo", user=ddbb_user, password=ddbb_password) as repo:
 
-            logger.info(f"Fetching report {databaseName} name: {scan['name']}")
+                logger.info(f"Fetching report {databaseName} name: {scan.name}")
 
+                try:
+                    endpoints, vulnerabilities = nessus.scan_export_request(scan.id)
 
+                    logger.info("Updating vulnerabilities...")
+                    for vulnerability in vulnerabilities:
+                        update_vulnerability(repo, vulnerability)
+                    logger.info("Vulnerabilities updated")
 
-            try:
-                scanID = scan['id']
-                endpoints, vulnerabilities = nessus.scan_export_request(scanID)
+                    logger.info("Updating endpoints...")
+                    for endpoint in endpoints:
+                        update_endpoint(repo, endpoint)
+                    logger.info("Endpoints updated")
 
-                logger.info("Updating vulnerabilities...")
-                for vulnerability in vulnerabilities:
-                    update_vulnerability(repo, vulnerability)
-                logger.info("Vulnerabilities updated")
-
-                logger.info("Updating endpoints...")
-                for endpoint in endpoints:
-                    update_endpoint(repo, endpoint)
-                logger.info("Endpoints updated")
-
-                # generate_spreadsheet_report(reportName)
-                # suffix = str(datetime.now().date()) 
+                    # generate_spreadsheet_report(reportName)
+                    # suffix = str(datetime.now().date()) 
 
 
-                # send_email_report(emailFrom, emailTo, f"{subject} - {suffix}", mailServer, reportName, reportName+'-'+suffix, 'xlsx')
-                # logger.info(f'Sending report {reportName}-{suffix}.xlsx to {emailTo}')
+                    # send_email_report(emailFrom, emailTo, f"{subject} - {suffix}", mailServer, reportName, reportName+'-'+suffix, 'xlsx')
+                    # logger.info(f'Sending report {reportName}-{suffix}.xlsx to {emailTo}')
 
-                if not is_scan_already_parser(scan, scans_updated):
-                    log_summary(vulnerabilities, scan, repo)
+                    if not is_scan_parser_previously(scan, scans_updated):
+                        log_summary(vulnerabilities, scan, repo)
 
-                logger.info('Done')
-            
-            except Exception as e:
-                print(f"Error fetching {databaseName} name: {scan['name']}: {e}")
+                    logger.info('Done')
+                
+                except Exception as e:
+                    print(f"Error fetching {databaseName} name: {scan.name}: {e}")
         
         sleepTime = int(config['nessus']['checkScanInterval'])
         logger.info(f"Waiting {str(timedelta(seconds=sleepTime))} for the next scan")
         time.sleep(sleepTime)
 
-def log_summary(vulnerabilities: list[Vulnerability], scan: dict, repo: Repo):
+def log_summary(vulnerabilities: list[Vulnerability], scan: Scan, repo: Repo):
     logOutput = {}
     logOutput['msg'] = 'Results summary'
     countVuln = [v.threat for v in vulnerabilities]
@@ -92,24 +90,24 @@ def log_summary(vulnerabilities: list[Vulnerability], scan: dict, repo: Repo):
     logOutput['Medium'] = countVuln.count('Medium')
     logOutput['Low'] = countVuln.count('Low')
     logOutput['assessment'] = repo.databaseName
-    logOutput['scan'] = scan['name']
+    logOutput['scan'] = scan.name
     logOutput['table_format'] = f"{logOutput['msg']}\nassessment: {logOutput['assessment']}\nscan: {logOutput['scan']}\ncritical: {logOutput['critical']}\nHigh: {logOutput['High']}\nMedium: {logOutput['Medium']}\nLow: {logOutput['Low']}\n"
                                 
     logger.info(json.dumps(logOutput))
 
 
-def is_scan_already_parser(scan: dict, scans_updated: dict):
-    if scan['id'] in scans_updated:
-        if scans_updated[scan['id']] == scan['last_modification_date']:
+def is_scan_parser_previously(scan: Scan, scans_updated: dict):
+    if scan.id in scans_updated:
+        if scans_updated[scan.id] == scan.last_modification_date:
             return True
         
-    scans_updated[scan['id']] = scan['last_modification_date']
+    scans_updated[scan.id] = scan.last_modification_date
     return False
 
 def update_vulnerability(repo: Repo, vulnerability: Vulnerability):
     result = repo.add_vulnerability(vulnerability)
     if not result.matched_count:
-        logger.info(f"Added vulnerability to ddbb. id:{vulnerability._id} threat:{vulnerability.threat}")
+        log_vuln("Added vulnerability to ddbb", vulnerability, repo=repo)
 
 
 def update_endpoint(repo: Repo, endpoint: Endpoint):
@@ -119,35 +117,38 @@ def update_endpoint(repo: Repo, endpoint: Endpoint):
         repo.add_endpoint(endpoint)
         for vulnID in endpoint.vulnerabilities.keys():
             vuln = repo.find_vuln_by_id(vulnID)
-            log_vuln("Added vulnerability",endpoint, vuln, repo)
+            log_vuln("Added vulnerability",vuln, endpoint, repo)
 
     if fetchEndpoint:
         vulnAdded, vulnSolved = fetchEndpoint.update_vulnerabilities(endpoint)
         for vulnID in vulnAdded:
             vuln = repo.find_vuln_by_id(vulnID)
-            log_vuln("Added vulnerability:",fetchEndpoint, vuln, repo)
+            log_vuln("Added vulnerability:",vuln, fetchEndpoint, repo)
         for vulnID in vulnSolved:
             vuln = repo.find_vuln_by_id(vulnID)
-            log_vuln("Solved vulnerability:",fetchEndpoint, vuln, repo)
+            log_vuln("Solved vulnerability:",vuln, fetchEndpoint, repo)
         repo.add_endpoint(fetchEndpoint)
 
 
-def generate_spreadsheet_report(reportName):    
-    vulnerabilities = repo.get_summary()
-    Report.toExcel(vulnerabilities, reportName)
+# def generate_spreadsheet_report(reportName):    
+#     vulnerabilities = repo.get_summary()
+#     Report.toExcel(vulnerabilities, reportName)
 
-def log_vuln(msg, endpoint, vulnerability, repo: Repo):
+def log_vuln(msg, vulnerability, endpoint: Endpoint=None, repo: Repo=None):
     logOutput = vulnerability.json()
-    logOutput['ip'] = endpoint.ip
-    logOutput['port'] = endpoint.port
-    logOutput['protocol'] = endpoint.protocol
+    if endpoint:
+        logOutput['ip'] = endpoint.ip
+        logOutput['port'] = endpoint.port
+        logOutput['protocol'] = endpoint.protocol
+        logOutput['status'] = endpoint.vulnerabilities[vulnerability._id]['status']
+    if repo:
+        logOutput['assessment'] = repo.databaseName
     logOutput['id'] = logOutput['_id']
     del logOutput['_id']
-    del logOutput['description']
+    logOutput['description']
     logOutput['msg'] = msg
-    logOutput['assessment'] = repo.databaseName
-    logOutput['status'] = endpoint.vulnerabilities[vulnerability._id]['status']
     logger.info(json.dumps(logOutput))
+
 
 def log_endpoint(msg, endpoint, repo: Repo):
     logOutput = endpoint.json()

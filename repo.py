@@ -30,9 +30,9 @@ class Endpoint:
         if hostname not in self.hostnames:
             self.hostnames.append(hostname)
     
-    def solve_vulnerability(self, id:int):
-        self.vulnerabilities[id]['status'] = "Solved"
-        self.vulnerabilities[id]['solved_time'] = time.time()
+    def solve_vulnerability(self, id:str|int):
+        self.vulnerabilities[str(id)]['status'] = "Solved"
+        self.vulnerabilities[str(id)]['solved_time'] = time.time()
 
     def update_vulnerabilities(self, other):
         vulnSolved = []
@@ -45,7 +45,7 @@ class Endpoint:
                 self.solve_vulnerability(id)
                 vulnSolved.append(id)
 
-        return (vulnAdded, vulnSolved)
+        return (vulnAdded, set(vulnSolved))
 
 
     def json(self):
@@ -81,6 +81,7 @@ class Vulnerability:
 class Repo:
     """Class for database management."""
     _database: str
+    _client: str
     databaseName: str
     collections: dict[str,str]
     user: str
@@ -97,12 +98,20 @@ class Repo:
         CONNECTION_STRING = "mongodb://%s:%s" + "@" + host
         
         # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
-        client = MongoClient(CONNECTION_STRING % (user,password))
+        self._client = MongoClient(CONNECTION_STRING % (user,password))
         
         # Create the database for our example (we will use the same database throughout the tutorial
-        self._database = client[databaseName]
+        self._database = self._client[databaseName]
 
         self.collections = {"vulnerability":self._database["vulnerability"],"host":self._database["host"]}
+
+    def __enter__(self):
+        print('enter')
+        return self
+
+    def __exit__(self, type, value, traceback):
+        print('exit')
+        self._client.close()
 
     def get_endpoint(self, host, portProtocol):
 
