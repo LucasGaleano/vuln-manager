@@ -138,7 +138,7 @@ def log_vuln(msg, vulnerability, endpoint: Endpoint=None, repo: Repo=None):
     logOutput = vulnerability.json()
     if endpoint:
         logOutput['ip'] = endpoint.ip
-        logOutput['port'] = endpoint.port
+        logOutput['dstport'] = endpoint.port
         logOutput['protocol'] = endpoint.protocol
         logOutput['status'] = endpoint.vulnerabilities[vulnerability._id]['status']
     if repo:
@@ -153,6 +153,8 @@ def log_vuln(msg, vulnerability, endpoint: Endpoint=None, repo: Repo=None):
 def log_endpoint(msg, endpoint, repo: Repo):
     logOutput = endpoint.json()
     logOutput['msg'] = msg
+    logOutput['dstport'] = logOutput['port']
+    del logOutput['port']
     del logOutput['vulnerabilities']
     logOutput['assessment'] = repo.databaseName
     logger.info(json.dumps(logOutput))
