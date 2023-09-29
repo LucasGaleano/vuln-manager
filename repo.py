@@ -151,6 +151,14 @@ class Repo:
 
     def get_all_oids(self):
         return [oid['_id'] for  oid in self.collections['vulnerability'].find(projection={'_id':1})]
+    
+    def get_all_endpoints(self):
+        endpoints = []
+        for endpoint in self.collections['host'].find():
+            del endpoint['_id']
+            endpoints.append(Endpoint(**endpoint))
+        return endpoints
+
 
     def get_all_host(self):
         return self.collections['host'].find()
@@ -159,18 +167,18 @@ class Repo:
         vuln = self.collections['vulnerability'].find_one({"_id":id})
         return Vulnerability(**vuln)
     
-    def get_summary(self):
-        vulnerabilities = []
-        for host in self.get_all_host():
-            for oid, data in host['oids'].items():
-                vuln = self.find_vuln_by(oid)
-                if data['status'] == "Open":
-                    vuln['status'] = data['status']
-                    vuln['notes'] = data['notes']
-                    vuln.update(host)
-                    vuln.pop('oids')
-                    vuln.pop('_id')
-                    vuln['vulnerability ID'] = oid
-                    #{'cvss': '6.4', 'description': '', 'family': 'General', 'name': 'MQTT Broker Does Not Require Authentication', 'solution': '', 'threat': 'Medium', 'value': 'AV:N/AC:L/Au:N/C:P/I:P/A:N', 'status': 'Open', 'notes': '', 'host': '1.2.3.4', 'port': '1456', 'protocol': 'tcp', 'service': '', 'vulnerability ID': '1.3.6.1.4.1.25623.1.0.140167'}
-                    vulnerabilities.append(vuln)
-        return vulnerabilities
+    # def get_summary(self):
+    #     vulnerabilities = []
+    #     for host in self.get_all_host():
+    #         for oid, data in host['oids'].items():
+    #             vuln = self.find_vuln_by(oid)
+    #             if data['status'] == "Open":
+    #                 vuln['status'] = data['status']
+    #                 vuln['notes'] = data['notes']
+    #                 vuln.update(host)
+    #                 vuln.pop('oids')
+    #                 vuln.pop('_id')
+    #                 vuln['vulnerability ID'] = oid
+    #                 #{'cvss': '6.4', 'description': '', 'family': 'General', 'name': 'MQTT Broker Does Not Require Authentication', 'solution': '', 'threat': 'Medium', 'value': 'AV:N/AC:L/Au:N/C:P/I:P/A:N', 'status': 'Open', 'notes': '', 'host': '1.2.3.4', 'port': '1456', 'protocol': 'tcp', 'service': '', 'vulnerability ID': '1.3.6.1.4.1.25623.1.0.140167'}
+    #                 vulnerabilities.append(vuln)
+    #     return vulnerabilities

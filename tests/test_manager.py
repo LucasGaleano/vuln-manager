@@ -57,5 +57,6 @@ def test_endpoint():
     assert oldVulnEndpoint.vulnerabilities['12345']['status'] == "Open"
     assert len(oldVulnEndpoint.vulnerabilities) == 4
 
+
 def test_testing():
     assert 1==1

@@ -71,9 +71,11 @@ def main():
 
                     if not is_scan_parser_previously(scan, scans_updated):
                         log_summary(vulnerabilities, scan, repo)
+                        for endpoint in repo.get_all_endpoints():
+                            log_endpoint_status('Vulnerability report scan', endpoint, repo)
 
                     logger.info('Done')
-                
+            
                 except Exception as e:
                     print(f"Error fetching {databaseName} name: {scan.name}: {e}")
         
@@ -153,11 +155,38 @@ def log_vuln(msg, vulnerability, endpoint: Endpoint=None, repo: Repo=None):
 def log_endpoint(msg, endpoint, repo: Repo):
     logOutput = endpoint.json()
     logOutput['msg'] = msg
-    logOutput['dstport'] = logOutput['port']
+    logOutput['dstport'] = logOutput['port'] # changed field due to wazuh index.
     del logOutput['port']
     del logOutput['vulnerabilities']
     logOutput['assessment'] = repo.databaseName
     logger.info(json.dumps(logOutput))
+
+
+def log_endpoint_status(msg, endpoint: Endpoint, repo: Repo):
+    logOutput = endpoint.json()
+    logOutput['endpoint_id'] = logOutput['_id']
+    del logOutput['_id']
+    logOutput['msg'] = msg
+    logOutput['dstport'] = logOutput['port']
+    del logOutput['vulnerabilities']
+    del logOutput['port']
+    for VulnID, vulnData in endpoint.vulnerabilities.items():
+        vulnerability = repo.find_vuln_by_id(VulnID)
+        logOutput['name'] = vulnerability.name
+        logOutput['family'] = vulnerability.family
+        logOutput['threat'] = vulnerability.threat
+        logOutput['cvss3'] = vulnerability.cvss3
+        logOutput['cvss3Vector'] = vulnerability.cvss3Vector
+        logOutput['age'] = vulnerability.age
+        logOutput['vuln_id'] = vulnerability._id
+        for k, v in vulnData.items():
+            logOutput[k] = v
+    logger.info(json.dumps(logOutput))
+    
+
+
+        
+
 
 # def get_netbox_ip(publicIP=True):
 
