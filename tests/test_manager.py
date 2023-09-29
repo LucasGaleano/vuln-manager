@@ -43,17 +43,19 @@ def test_endpoint():
     oldVulnEndpoint.add_vulnerability('123')
     oldVulnEndpoint.add_vulnerability('1234')
     oldVulnEndpoint.add_vulnerability('12345')
+    oldVulnEndpoint.solve_vulnerability('12345')
 
     vulnAdded, vulnSolved = oldVulnEndpoint.update_vulnerabilities(newVulnEndpoint)
 
-    assert vulnAdded == {'11111'}
+    assert vulnAdded == {'11111','12345'}
     assert vulnSolved == {'1234'}
 
     oldVulnEndpoint.solve_vulnerability('123')
 
     assert oldVulnEndpoint.vulnerabilities['123']['status'] == "Solved"
     assert oldVulnEndpoint.vulnerabilities['1234']['status'] == "Solved"
-
+    assert oldVulnEndpoint.vulnerabilities['12345']['status'] == "Open"
+    assert len(oldVulnEndpoint.vulnerabilities) == 4
 
 def test_testing():
     assert 1==1

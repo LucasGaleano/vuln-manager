@@ -145,7 +145,7 @@ def log_vuln(msg, vulnerability, endpoint: Endpoint=None, repo: Repo=None):
         logOutput['assessment'] = repo.databaseName
     logOutput['id'] = logOutput['_id']
     del logOutput['_id']
-    logOutput['description']
+    del logOutput['description']
     logOutput['msg'] = msg
     logger.info(json.dumps(logOutput))
 

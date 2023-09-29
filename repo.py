@@ -34,16 +34,24 @@ class Endpoint:
         self.vulnerabilities[str(id)]['status'] = "Solved"
         self.vulnerabilities[str(id)]['solved_time'] = time.time()
 
+    def open_vulnerability(self, id:str|int):
+        self.vulnerabilities[str(id)]['status'] = "Open"
+        self.vulnerabilities[str(id)]['solved_time'] = ""
+
     def update_vulnerabilities(self, other):
         vulnSolved = []
-        vulnMissing = self.vulnerabilities.keys() - other.vulnerabilities.keys()
-        vulnAdded = other.vulnerabilities.keys() - self.vulnerabilities.keys()
+        vulnOpen = {k for k,v in self.vulnerabilities.items() if v['status']=='Open'}
+        vulnMissing = vulnOpen - other.vulnerabilities.keys()
+        vulnAdded = other.vulnerabilities.keys() - vulnOpen
         for id in vulnAdded:
-            self.add_vulnerability(id)
+            if id in self.vulnerabilities:
+                self.open_vulnerability(id)
+            else:
+                self.add_vulnerability(id)
         for id in vulnMissing:
-            if self.vulnerabilities[id]['status'] == "Open":
-                self.solve_vulnerability(id)
-                vulnSolved.append(id)
+            #if self.vulnerabilities[id]['status'] == "Open":
+            self.solve_vulnerability(id)
+            vulnSolved.append(id)
 
         return (vulnAdded, set(vulnSolved))
 
@@ -106,11 +114,9 @@ class Repo:
         self.collections = {"vulnerability":self._database["vulnerability"],"host":self._database["host"]}
 
     def __enter__(self):
-        print('enter')
         return self
 
     def __exit__(self, type, value, traceback):
-        print('exit')
         self._client.close()
 
     def get_endpoint(self, host, portProtocol):
