@@ -173,6 +173,8 @@ def log_endpoint_status(msg, endpoint: Endpoint, repo: Repo):
     logOutput['dstport'] = logOutput['port']
     del logOutput['vulnerabilities']
     del logOutput['port']
+    if repo:
+        logOutput['assessment'] = repo.databaseName
     for VulnID, vulnData in endpoint.vulnerabilities.items():
         vulnerability = repo.find_vuln_by_id(VulnID)
         logOutput['name'] = vulnerability.name
