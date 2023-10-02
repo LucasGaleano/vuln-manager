@@ -79,7 +79,7 @@ def main():
                 except Exception as e:
                     print(f"Error fetching {databaseName} name: {scan.name}: {e}")
         
-        ### release RAM
+        ### released RAM
         endpoints = []
         vulnerabilities = []
         sleepTime = int(config['nessus']['checkScanInterval'])
