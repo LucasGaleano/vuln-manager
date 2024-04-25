@@ -27,6 +27,7 @@ class Scan():
     last_modification_date: int
     read: bool
     type: str
+    isWas: bool
     folder_id: int
     folder_name: str
 
